@@ -5,7 +5,7 @@ import { debounce } from '../utils/debounce';
 
 export const useFirestoreSync = (
   roomId: string,
-  editorRef: React.RefObject<HTMLDivElement> | null,
+  editorRef: React.RefObject<HTMLDivElement | null>,
   username: string
 ) => {
     const [lastEditedBy, setLastEditedBy] = useState<string>("");
