@@ -84,43 +84,72 @@ export const useFirestoreSync = (
 ) => {
   const [lastEditedBy, setLastEditedBy] = useState<string>('');
   const [cursors, setCursors] = useState<CursorMap>({});
+const [lastLocalText, setLastLocalText] = useState("");
+  // useEffect(() => {
+  //   const docRef = doc(db, 'documents', roomId);
 
-  useEffect(() => {
-    const docRef = doc(db, 'documents', roomId);
+  //   const unsubscribe = onSnapshot(docRef, (docSnap) => {
+  //     const data = docSnap.data();
 
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      const data = docSnap.data();
-
-      if (
-        editorRef?.current &&
-        data?.content !== editorRef.current.innerText
-      ) {
+  //     if (
+  //       editorRef?.current &&
+  //       data?.content !== editorRef.current.innerText
+  //     ) {
        
-        if (data?.lastEditedBy !== username) {
-          const selection = window.getSelection();
-          const range = selection?.getRangeAt(0);
-          const caretOffset = range ? getCaretCharacterOffsetWithin(editorRef.current) : null;
+  //       if (data?.lastEditedBy !== username) {
+  //         const selection = window.getSelection();
+  //         const range = selection?.getRangeAt(0);
+  //         const caretOffset = range ? getCaretCharacterOffsetWithin(editorRef.current) : null;
 
-          editorRef.current.innerText = data?.content || '';
+  //         editorRef.current.innerText = data?.content || '';
 
          
-          if (caretOffset !== null) {
-            setCaretPosition(editorRef.current, caretOffset);
-          }
-        }
-      }
+  //         if (caretOffset !== null) {
+  //           setCaretPosition(editorRef.current, caretOffset);
+  //         }
+  //       }
+  //     }
 
-      if (data?.lastEditedBy) {
-        setLastEditedBy(data.lastEditedBy);
-      }
+  //     if (data?.lastEditedBy) {
+  //       setLastEditedBy(data.lastEditedBy);
+  //     }
 
-      if (data?.cursors) {
-        setCursors(data.cursors);
-      }
-    });
+  //     if (data?.cursors) {
+  //       setCursors(data.cursors);
+  //     }
+  //   });
 
-    return () => unsubscribe();
-  }, [editorRef, roomId, username]);
+  //   return () => unsubscribe();
+  // }, [editorRef, roomId, username]);
+
+// console.log(setLastLocalText);
+
+useEffect(() => {
+  const docRef = doc(db, 'documents', roomId);
+
+  const unsubscribe = onSnapshot(docRef, (docSnap) => {
+    const data = docSnap.data();
+    if (!editorRef.current || !data) return;
+
+    const remoteContent = data.content || '';
+
+    if (remoteContent !== lastLocalText && data.lastEditedBy !== username) {
+      
+      const caretOffset = getCaretCharacterOffsetWithin(editorRef.current);
+
+      editorRef.current.innerText = remoteContent;
+
+      if (caretOffset !== null) {
+        setCaretPosition(editorRef.current, caretOffset);
+      }
+    }
+
+    if (data?.lastEditedBy) setLastEditedBy(data.lastEditedBy);
+    if (data?.cursors) setCursors(data.cursors);
+  });
+
+  return () => unsubscribe();
+}, [editorRef, roomId, username, lastLocalText]);
 
   const saveContent = debounce(async (text: string) => {
     const docRef = doc(db, 'documents', roomId);
@@ -141,12 +170,13 @@ export const useFirestoreSync = (
 
   const handleInput = () => {
     if (editorRef?.current) {
-      const text = editorRef.current.innerText;
-      saveContent(text);
+    const text = editorRef.current.innerText;
+    setLastLocalText(text);
+    saveContent(text);
 
-      const pos = getCaretCharacterOffsetWithin(editorRef.current);
-      saveCursorPosition(pos);
-    }
+    const pos = getCaretCharacterOffsetWithin(editorRef.current);
+    saveCursorPosition(pos);
+  }
   };
 
   useEffect(() => {
