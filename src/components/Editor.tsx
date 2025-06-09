@@ -1,153 +1,99 @@
-// import React, { useRef } from 'react';
-// import { useUser } from '../context/UserContext';
-// import { useFirestoreSync } from '../hooks/useFirestoreSync';
 
-// const ROOM_ID = 'main-room';
-
-// const Editor: React.FC = () => {
-//   const editorRef = useRef<HTMLDivElement>(null);
-//   const { username } = useUser();
-//   const { handleInput, lastEditedBy } = useFirestoreSync(ROOM_ID, editorRef, username);
-
-
-//   return (
-//     <div className="p-4 max-w-3xl mx-auto text-white">
-//       <h2 className="text-lg mb-2 ">Logged in as: <strong>{username}</strong></h2>
-//       {/* <div>hello</div> */}
-//       <div className="relative">
-//   {!editorRef.current?.innerText && (
-//     <div className="absolute  p-4 pointer-events-none">
-//       Start typing...
-//     </div>
-//   )}
-//   <div
-//     ref={editorRef}
-//     contentEditable
-//     suppressContentEditableWarning
-//     onInput={handleInput}
-//     className="bg-black border rounded shadow p-4 min-h-[200px] outline-none whitespace-pre-wrap"
-//   />
-// </div>
-
-//       {lastEditedBy && (
-//   <p className="mt-2 text-sm text-red-500">
-//     Last edited by <strong>{lastEditedBy}</strong>
-//   </p>
-// )}
-
-//     </div>
-    
-//   );
-// };
-
-// export default Editor;
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useUser } from '../context/UserContext';
-import { useFirestoreSync } from '../hooks/useFirestoreSync';
+import { db } from '../firebase/firebase';
+import { doc, onSnapshot, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import { UserCursors } from '../utils/UserCursors';
+
+const COLORS = ['#d72631', '#1b998b', '#2d3047', '#ffca3a', '#1982c4', '#6a0572', '#f46036'];
+
+function assignColor(username: string) {
+  let sum = 0;
+  for (let i = 0; i < username.length; i++) {
+    sum += username.charCodeAt(i);
+  }
+  return COLORS[sum % COLORS.length];
+}
+
+const roomId = 'main-room';
 
 const Editor: React.FC = () => {
-  const editorRef = useRef<HTMLDivElement>(null);
   const { username } = useUser();
-  const { handleInput, lastEditedBy, cursors } = useFirestoreSync('main-room', editorRef, username);
-  const [caretPositions, setCaretPositions] = useState<{[user:string]: {top:number, left:number, color:string}} >({});
+  const [cursors, setCursors] = useState<any>(null);
+console.log(cursors);
 
+  const editor = useEditor({
+    extensions: [StarterKit, UserCursors],
+    content: '',
+    onUpdate: ({ editor }) => {
+      if (!username) return;
+      const json = editor.getJSON();
+      const selection = editor.state.selection;
 
-  function getCaretCoordinates(position: number) {
-    if (!editorRef.current) return null;
-    const range = document.createRange();
-    const textNode = editorRef.current.firstChild;
-    if (!textNode || textNode.nodeType !== 3) return null; // We expect text node only here
-    const length = textNode.textContent?.length || 0;
-    const pos = Math.min(position, length);
-
-    range.setStart(textNode, pos);
-    range.setEnd(textNode, pos);
-
-    const rects = range.getClientRects();
-    if (rects.length === 0) return null;
-    const rect = rects[0];
-
-
-    const editorRect = editorRef.current.getBoundingClientRect();
-
-    return {
-      top: rect.top - editorRect.top + editorRef.current.scrollTop,
-      left: rect.left - editorRect.left + editorRef.current.scrollLeft,
-    };
-  }
+      if (editor.isFocused) {
+        updateDoc(doc(db, 'documents', roomId), {
+          content: json,
+          lastEditedBy: username,
+          timestamp: serverTimestamp(),
+          [`cursors.${username}`]: {
+            from: selection.from,
+            to: selection.to,
+            color: assignColor(username),
+            username,
+          },
+        }).catch(async () => {
+          await setDoc(doc(db, 'documents', roomId), {
+            content: json,
+            cursors: {
+              [username]: {
+                from: selection.from,
+                to: selection.to,
+                color: assignColor(username),
+                username,
+              },
+            },
+            lastEditedBy: username,
+            timestamp: serverTimestamp(),
+          });
+        });
+      }
+    },
+  });
 
   useEffect(() => {
-    const newCaretPositions: {[user:string]: {top:number, left:number, color:string}} = {};
-    if (!editorRef.current) return;
-    Object.entries(cursors).forEach(([user, cursor]) => {
-      if(user === username) return; // skip own cursor
-      const coords = getCaretCoordinates(cursor.position);
-      if (coords) {
-        newCaretPositions[user] = { top: coords.top, left: coords.left, color: cursor.color };
-      }
-    });
-    setCaretPositions(newCaretPositions);
-  }, [cursors, username]);
+    if (!editor) return;
+    const docRef = doc(db, 'documents', roomId);
+    const unsubscribe = onSnapshot(docRef, (snapshot) => {
+      const data = snapshot.data();
+      if (!data) return;
 
+      const content = data.content;
+      const lastEditedBy = data.lastEditedBy;
+      const cursorsFromDB = data.cursors || {};
+
+      if (lastEditedBy !== username) {
+        if (JSON.stringify(content) !== JSON.stringify(editor.getJSON())) {
+          editor.commands.setContent(content);
+        }
+      }
+
+      setCursors(cursorsFromDB);
+      editor.commands.setCursors(cursorsFromDB);
+    });
+
+    return () => unsubscribe();
+  }, [editor, username]);
 
   return (
-    <div className="p-4 max-w-3xl mx-auto text-white relative">
-      <h2 className="text-lg mb-2 ">
-        Logged in as: <strong>{username}</strong>
-      </h2>
-
-      <div
-        ref={editorRef}
-        contentEditable
-        suppressContentEditableWarning
-        onInput={handleInput}
-        className="bg-black border rounded shadow p-4 min-h-[200px] outline-none whitespace-pre-wrap relative"
-        spellCheck={false}
-        style={{position:'relative'}}
-      />
-
-
-      {Object.entries(caretPositions).map(([user, pos]) => (
-        <div
-          key={user}
-          style={{
-            position: 'absolute',
-            top: pos.top,
-            left: pos.left,
-            height: '20px',
-            width: '2px',
-            backgroundColor: pos.color,
-            pointerEvents: 'none',
-            zIndex: 10,
-            
-          }}
-        >
-
-          <div
-            style={{
-              position: 'absolute',
-              top: '18px',
-              left: 0,
-              backgroundColor: pos.color,
-              padding: '2px 6px',
-              borderRadius: '4px',
-              fontSize: '10px',
-              fontWeight: 'bold',
-              whiteSpace: 'nowrap',
-              userSelect: 'none',
-              color: 'white',
-            }}
-          >
-            {user}
-          </div>
-        </div>
-      ))}
-
-      {lastEditedBy && (
-        <p className="mt-2 text-sm text-red-500">
-          Last edited by <strong>{lastEditedBy}</strong>
-        </p>
-      )}
+    <div className="min-h-screen bg-gradient-to-br from-[#1a252f] via-[#34495e] to-[#0d7d49] p-8">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-2xl p-6 text-black">
+        <h2 className="mb-4 font-bold text-xl text-gray-800">
+          Logged in as: <span className="text-green-600">{username}</span>
+        </h2>
+        <EditorContent editor={editor} className="border border-gray-300 rounded p-4 min-h-[200px]" />
+      </div>
     </div>
   );
 };

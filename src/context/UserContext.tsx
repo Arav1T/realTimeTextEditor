@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
+
+import React, { createContext, useContext, useState, } from 'react';
+import type {ReactNode} from 'react'
 
 interface UserContextType {
   username: string;
@@ -7,8 +9,9 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [username, setUsername] = useState('');
+export const UserProvider = ({ children }: { children: ReactNode }) => {
+  const [username, setUsername] = useState<string>('');
+
   return (
     <UserContext.Provider value={{ username, setUsername }}>
       {children}
