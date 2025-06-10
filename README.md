@@ -1,3 +1,85 @@
+# 📝 Real-Time Collaborative Text Editor
+
+A lightweight collaborative text editor built with **React**, **TypeScript**, **Tailwind CSS**, and **Firebase Firestore**. Multiple users can edit a shared document and see each other's changes in real time.
+
+---
+
+## 🚀 Features
+
+Real-time collaborative editing using Firebase Firestore.
+
+Simple contenteditable-based rich text editor TipTap.
+
+User identification via username prompt.
+
+Live display of which user last edited the document.
+
+Responsive UI styled with TailwindCSS.
+
+## 📁 Project Structure
+
+
+
+src/
+  components/
+    Editor.tsx        # The main editor component with contenteditable div
+    Login.tsx # Prompt for username input
+  context/
+    UserContext.tsx    # React context for user management
+ 
+  firebase/
+    firebase.ts        # Firebase initialization
+  utils/
+    useCursors.ts       # Utility function
+App.tsx               # Main app component
+
+
+Installation:
+1- Clone the repository:
+git clone https://github.com/yourusername/realtime-collaborative-editor.git
+cd realtime-collaborative-editor
+
+2- Install dependencies:
+npm install
+
+3- Create a .env file in the root directory and add your Firebase config variables:
+VITE_APPKEY=your_firebase_apiKey
+VITE_AUTHDOMAIN=your_firebase_authDomain
+VITE_PROJECT_ID=your_firebase_projectId
+VITE_STORAGE_BUCKET=your_firebase_storageBucket
+VITE_MESSAGING_SENDER_ID=your_firebase_messagingSenderId
+VITE_APP_ID=your_firebase_appId
+
+4- npm run dev
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
