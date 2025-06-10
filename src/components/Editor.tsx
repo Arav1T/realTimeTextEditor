@@ -26,6 +26,12 @@ console.log(cursors);
 
   const editor = useEditor({
     extensions: [StarterKit, UserCursors],
+    editorProps: {
+    attributes: {
+      class: 'focus-none',
+      style: 'outline:none;box-shadow:none;border:none;',
+    },
+  },
     content: '',
     onUpdate: ({ editor }) => {
       if (!username) return;
@@ -92,7 +98,11 @@ console.log(cursors);
         <h2 className="mb-4 font-bold text-xl text-gray-800">
           Logged in as: <span className="text-green-600">{username}</span>
         </h2>
-        <EditorContent editor={editor} className="border border-gray-300 rounded p-4 min-h-[200px]" />
+        <EditorContent editor={editor} style={{
+    outline: 'none',
+    boxShadow: 'none',
+    border: 'none',
+  }} className=" border border-gray-300 rounded p-4 min-h-[200px]" />
       </div>
     </div>
   );

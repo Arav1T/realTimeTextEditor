@@ -1,0 +1,13 @@
+
+.ProseMirror:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+
+.ProseMirror *:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
